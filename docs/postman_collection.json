@@ -1,0 +1,136 @@
+{
+  "info": {
+    "name": "MIGO Backend API",
+    "_postman_id": "12345678-abcd-efgh-ijkl-987654321000",
+    "description": "Colección de endpoints del backend MIGO con Oracle Autonomous Database y ORDS",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Usuarios - Obtener todos",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://ga6f1d821261f2a-migodb.adb.mx-queretaro-1.oraclecloudapps.com/ords/migo_user/usuarios/",
+          "protocol": "https",
+          "host": [
+            "ga6f1d821261f2a-migodb",
+            "adb",
+            "mx-queretaro-1",
+            "oraclecloudapps",
+            "com"
+          ],
+          "path": ["ords", "migo_user", "usuarios", ""]
+        }
+      }
+    },
+    {
+      "name": "Usuarios - Obtener por ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://ga6f1d821261f2a-migodb.adb.mx-queretaro-1.oraclecloudapps.com/ords/migo_user/usuarios/1",
+          "protocol": "https",
+          "host": [
+            "ga6f1d821261f2a-migodb",
+            "adb",
+            "mx-queretaro-1",
+            "oraclecloudapps",
+            "com"
+          ],
+          "path": ["ords", "migo_user", "usuarios", "1"]
+        }
+      }
+    },
+    {
+      "name": "Usuarios - Crear nuevo",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Bryan\",\n  \"apellido\": \"Martinez\",\n  \"correo\": \"bryan@example.com\",\n  \"contrasena\": \"ClaveSegura123\",\n  \"telefono\": \"9999999999\",\n  \"direccion\": \"Av. Principal #123\",\n  \"id_colonia\": 1,\n  \"rol\": \"ciudadano\",\n  \"estado_cuenta\": \"activo\"\n}"
+        },
+        "url": {
+          "raw": "https://ga6f1d821261f2a-migodb.adb.mx-queretaro-1.oraclecloudapps.com/ords/migo_user/usuarios/",
+          "protocol": "https",
+          "host": [
+            "ga6f1d821261f2a-migodb",
+            "adb",
+            "mx-queretaro-1",
+            "oraclecloudapps",
+            "com"
+          ],
+          "path": ["ords", "migo_user", "usuarios", ""]
+        }
+      }
+    },
+    {
+      "name": "Colonias - Obtener todas",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://ga6f1d821261f2a-migodb.adb.mx-queretaro-1.oraclecloudapps.com/ords/migo_user/colonias/",
+          "protocol": "https",
+          "host": [
+            "ga6f1d821261f2a-migodb",
+            "adb",
+            "mx-queretaro-1",
+            "oraclecloudapps",
+            "com"
+          ],
+          "path": ["ords", "migo_user", "colonias", ""]
+        }
+      }
+    },
+    {
+      "name": "Colonias - Obtener por ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://ga6f1d821261f2a-migodb.adb.mx-queretaro-1.oraclecloudapps.com/ords/migo_user/colonias/1",
+          "protocol": "https",
+          "host": [
+            "ga6f1d821261f2a-migodb",
+            "adb",
+            "mx-queretaro-1",
+            "oraclecloudapps",
+            "com"
+          ],
+          "path": ["ords", "migo_user", "colonias", "1"]
+        }
+      }
+    },
+    {
+      "name": "Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"correo\": \"usuario@example.com\",\n  \"contrasena\": \"ClaveSegura123\"\n}"
+        },
+        "url": {
+          "raw": "https://ga6f1d821261f2a-migodb.adb.mx-queretaro-1.oraclecloudapps.com/ords/migo_user/usuarios/login/",
+          "protocol": "https",
+          "host": [
+            "ga6f1d821261f2a-migodb",
+            "adb",
+            "mx-queretaro-1",
+            "oraclecloudapps",
+            "com"
+          ],
+          "path": ["ords", "migo_user", "usuarios", "login", ""]
+        }
+      }
+    }
+  ]
+}

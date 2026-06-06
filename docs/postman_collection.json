@@ -117,13 +117,18 @@
         "url": { "raw": "https://ga6f1d821261f2a-migodb.adb.mx-queretaro-1.oraclecloudapps.com/ords/migo_user/estados_publi/" }
       }
     },
-    {
+        {
       "name": "Login",
       "request": {
         "method": "POST",
         "header": [{ "key": "Content-Type", "value": "application/json" }],
-        "body": { "mode": "raw", "raw": "{ \"correo\": \"usuario@example.com\", \"contrasena\": \"ClaveSegura123\" }" },
-        "url": { "raw": "https://ga6f1d821261f2a-migodb.adb.mx-queretaro-1.oraclecloudapps.com/ords/migo_user/login/" }
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"correo\": \"usuario@example.com\", \"contrasena\": \"ClaveSegura123\" }"
+        },
+        "url": {
+          "raw": "https://ga6f1d821261f2a-migodb.adb.mx-queretaro-1.oraclecloudapps.com/ords/migo_user/login/"
+        }
       }
     }
   ]

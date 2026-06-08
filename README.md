@@ -1,4 +1,5 @@
 # MIGO Backend
+(No Actualizado. Ver /config/modulos_api.sql para ver la info más reciente)
 
 Backend académico desarrollado con **Oracle Autonomous Database** y **Oracle REST Data Services (ORDS)**.  
 Este proyecto implementa un **API REST** para la gestión de usuarios, colonias, publicaciones y fotos, incluyendo operaciones CRUD y un servicio de login funcional.
@@ -46,32 +47,6 @@ Este proyecto implementa un **API REST** para la gestión de usuarios, colonias,
 
 ### Login
 - `POST /login/`  
-  **Body (JSON):**
-  ```json
-  {
-    "correo": "usuario@example.com",
-    "contrasena": "ClaveSegura123"
-  }
-  ```
-
-  **Respuesta exitosa:**
-  ```json
-  {
-    "status": "success",
-    "id_usuario": 1,
-    "nombre": "Bryan",
-    "rol": "usuario",
-    "estado_cuenta": "activo"
-  }
-  ```
-
-  **Respuesta error:**
-  ```json
-  {
-    "status": "error",
-    "message": "Credenciales inválidas"
-  }
-  ```
 
 ## Documentación
 - Scripts SQL para creación de tablas y datos de prueba en `/sql`

@@ -176,11 +176,14 @@ app.post('/api/login-vet', (req, res) => {
 });
 
 
-// Registro de veterinario
+// Registro de veterinario (ACTUALIZADO)
 app.post('/api/registro-vet', (req, res) => {
-    const { nombre, apellido, correo, contrasena, id_colonia, nombre_establecimiento } = req.body;
+    // 1. Añadimos correo_negocio y telefono_local a la desestructuración
+    const { 
+        nombre, apellido, correo, contrasena, id_colonia, 
+        nombre_establecimiento, correo_negocio, telefono_local 
+    } = req.body;
 
-    // Validar si el correo ya existe
     const checkSql = "SELECT id_usuario FROM usuarios WHERE correo = ?";
     db.query(checkSql, [correo], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -188,20 +191,21 @@ app.post('/api/registro-vet', (req, res) => {
             return res.status(400).json({ error: "El correo ya está registrado" });
         }
 
-        // 1. Iniciar transacción para asegurar que todo se guarde o nada se guarde
         db.beginTransaction((err) => {
             if (err) return res.status(500).json({ error: "Error de conexión" });
 
-            // 2. Insertar en tabla usuarios
             const sqlUser = "INSERT INTO usuarios (nombre, apellido, correo, contrasena, id_colonia, rol) VALUES (?, ?, ?, ?, ?, 'veterinario')";
             db.query(sqlUser, [nombre, apellido, correo, contrasena, id_colonia], (err, result) => {
                 if (err) return db.rollback(() => res.status(500).json({ error: err.message }));
 
                 const id_usuario = result.insertId;
 
-                // 3. Insertar en tabla veterinarias
-                const sqlVet = "INSERT INTO veterinarias (id_usuario, nombre_establecimiento) VALUES (?, ?)";
-                db.query(sqlVet, [id_usuario, nombre_establecimiento], (err) => {
+                // 2. Insertamos los nuevos campos en la tabla veterinarias
+                const sqlVet = `INSERT INTO veterinarias 
+                    (id_usuario, nombre_establecimiento, correo_negocio, telefono_local) 
+                    VALUES (?, ?, ?, ?)`;
+                
+                db.query(sqlVet, [id_usuario, nombre_establecimiento, correo_negocio, telefono_local], (err) => {
                     if (err) return db.rollback(() => res.status(500).json({ error: err.message }));
 
                     db.commit((err) => {
@@ -214,5 +218,135 @@ app.post('/api/registro-vet', (req, res) => {
     });
 });
 
+app.get('/api/veterinarias', (req, res) => {
+    const sql = `
+        SELECT v.*, c.nombre AS nombre_colonia 
+        FROM veterinarias v 
+        LEFT JOIN colonias c ON v.id_colonia = c.id_colonia
+    `;
+    
+    db.query(sql, (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results);
+    });
+});
+
+//Obtener detalles de una veterinaria específica
+app.get('/api/veterinaria/:id', (req, res) => {
+    const sql = `
+        SELECT v.*, c.nombre AS nombre_colonia 
+        FROM veterinarias v 
+        LEFT JOIN colonias c ON v.id_colonia = c.id_colonia 
+        WHERE v.id_vet = ?
+    `;
+    db.query(sql, [req.params.id], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (results.length === 0) return res.status(404).json({ message: "No encontrada" });
+        res.json(results[0]);
+    });
+});
+
+//Obtener reseñas de una veterinaria
+app.get('/api/resenas/:id', (req, res) => {
+    const sql = `
+        SELECT r.*, CONCAT(u.nombre, ' ', u.apellido) AS nombre_completo 
+        FROM resenas r 
+        JOIN usuarios u ON r.id_usuario = u.id_usuario 
+        WHERE r.id_vet = ?
+    `;
+    db.query(sql, [req.params.id], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results);
+    });
+});
+
+//Publicar Resenas
+app.post('/api/resenas', (req, res) => {
+    console.log("Datos recibidos en el servidor:", req.body); // <--- MIRA LA CONSOLA DEL SERVIDOR (NODE)
+    
+    const { id_vet, id_usuario, comentario, calificacion } = req.body;
+    
+    // Si alguno es undefined, aquí veremos qué falta
+    if (!id_vet || !id_usuario) {
+        return res.status(400).json({ message: "Faltan datos obligatorios" });
+    }
+    
+    const sql = "INSERT INTO resenas (id_vet, id_usuario, comentario, calificacion) VALUES (?, ?, ?, ?)";
+    db.query(sql, [id_vet, id_usuario, comentario, calificacion], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: 'Reseña publicada con éxito' });
+    });
+});
+
+// Editar reseña
+app.put('/api/resenas/:id', (req, res) => {
+    const { comentario, calificacion } = req.body;
+    db.query("UPDATE resenas SET comentario = ?, calificacion = ? WHERE id_resena = ?", 
+        [comentario, calificacion, req.params.id], (err) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ message: 'Reseña actualizada' });
+        });
+});
+
+// Eliminar reseña
+app.delete('/api/resenas/:id', (req, res) => {
+    db.query("DELETE FROM resenas WHERE id_resena = ?", [req.params.id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: 'Reseña eliminada' });
+    });
+});
+
+//  Obtener comentarios
+app.get('/api/comentarios/:id_publi', (req, res) => {
+    const sql = `
+        SELECT c.*, CONCAT(u.nombre, ' ', u.apellido) AS nombre_completo 
+        FROM comentarios c 
+        JOIN usuarios u ON c.id_usuario = u.id_usuario 
+        WHERE c.id_publi = ?
+        ORDER BY c.fecha ASC
+    `;
+    db.query(sql, [req.params.id_publi], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results);
+    });
+});
+
+//  Publicar comentario
+app.post('/api/comentarios', (req, res) => {
+    const { id_publi, id_usuario, comentario } = req.body;
+    const sql = "INSERT INTO comentarios (id_publi, id_usuario, comentario) VALUES (?, ?, ?)";
+    db.query(sql, [id_publi, id_usuario, comentario], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: 'Comentario publicado', id: result.insertId });
+    });
+});
+
+//  Eliminar comentario 
+app.delete('/api/comentarios/:id_comentario/:id_usuario', (req, res) => {
+    const { id_comentario, id_usuario } = req.params;
+    
+    const sql = "DELETE FROM comentarios WHERE id_comentario = ? AND id_usuario = ?";
+    db.query(sql, [id_comentario, id_usuario], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (result.affectedRows === 0) return res.status(403).json({ message: "No tienes permiso" });
+        res.json({ message: 'Comentario eliminado' });
+    });
+});
+
+// Editar comentario
+app.put('/api/comentarios/:id_comentario', (req, res) => {
+    const { comentario, id_usuario } = req.body;
+    const { id_comentario } = req.params;
+
+    const sql = "UPDATE comentarios SET comentario = ? WHERE id_comentario = ? AND id_usuario = ?";
+    
+    db.query(sql, [comentario, id_comentario, id_usuario], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (result.affectedRows === 0) {
+            return res.status(403).json({ message: "No tienes permiso para editar este comentario" });
+        }
+        res.json({ message: 'Comentario actualizado' });
+    });
+});
 
 app.listen(4000, () => console.log('Servidor corriendo en puerto 4000 🏃‍♂️'));

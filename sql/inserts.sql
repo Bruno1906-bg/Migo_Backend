@@ -180,3 +180,31 @@ INSERT INTO vet_especies (id_vet, id_especie)
 VALUES
 (1, 1),
 (1, 2);
+
+-- Cambios tabla  VETERINARIAS 
+ALTER TABLE veterinarias 
+ADD COLUMN correo_negocio VARCHAR(255),
+ADD COLUMN telefono_local VARCHAR(20);
+
+
+UPDATE veterinarias 
+SET correo_negocio = 'vetcare@gmail.com', 
+    telefono_local = '9842072490' 
+WHERE id_vet = 1;
+
+--DATOS INSERTADOS EN LA NUEVA TABLA
+-- Comentario del usuario con ID 1
+INSERT INTO comentarios (id_publi, id_usuario, comentario) 
+VALUES (1, 1, '¡Espero que lo encuentren pronto!😽');
+
+-- Comentario del usuario con ID 2
+INSERT INTO comentarios (id_publi, id_usuario, comentario) 
+VALUES (1, 2, 'Yo lo vi cerca del parque esta mañana');
+
+-- Comentario del usuario con ID 3
+INSERT INTO comentarios (id_publi, id_usuario, comentario) 
+VALUES (1, 3, 'Qué tristeza, estaré atento por si lo veo');
+
+-- Comentario del usuario con ID 4
+INSERT INTO comentarios (id_publi, id_usuario, comentario) 
+VALUES (1, 4, 'Yo lo vi cerca del parque de mi casa');

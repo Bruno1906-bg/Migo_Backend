@@ -124,3 +124,21 @@ CREATE TABLE IF NOT EXISTS vet_especies (
 
 --Modificaciones importantes para tabla de usuarios
 ALTER TABLE usuarios ADD UNIQUE (correo);
+
+--Mas modificaciones
+ALTER TABLE veterinarias ADD COLUMN id_colonia INT;
+
+ALTER TABLE veterinarias 
+ADD CONSTRAINT fk_vet_colonia 
+FOREIGN KEY (id_colonia) REFERENCES colonias(id_colonia);
+
+--TABLA DE COMENTARIOS PARA PUBLICACIONES
+CREATE TABLE comentarios (
+    id_comentario INT AUTO_INCREMENT PRIMARY KEY,
+    id_publi INT NOT NULL,
+    id_usuario INT NOT NULL,
+    comentario TEXT NOT NULL,
+    fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_publi) REFERENCES publicaciones(id_publi) ON DELETE CASCADE,
+    FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario) ON DELETE CASCADE
+);

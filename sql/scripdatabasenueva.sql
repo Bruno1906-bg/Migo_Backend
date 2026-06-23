@@ -122,6 +122,10 @@ CREATE TABLE IF NOT EXISTS vet_especies (
     FOREIGN KEY (id_especie) REFERENCES especies(id_especie)
 );
 
+-------------------------------
+--Cambios o modificaciones DB--
+-------------------------------
+
 --Modificaciones importantes para tabla de usuarios
 ALTER TABLE usuarios ADD UNIQUE (correo);
 
@@ -131,6 +135,11 @@ ALTER TABLE veterinarias ADD COLUMN id_colonia INT;
 ALTER TABLE veterinarias 
 ADD CONSTRAINT fk_vet_colonia 
 FOREIGN KEY (id_colonia) REFERENCES colonias(id_colonia);
+
+-- Cambios tabla  VETERINARIAS 
+ALTER TABLE veterinarias 
+ADD COLUMN correo_negocio VARCHAR(255),
+ADD COLUMN telefono_local VARCHAR(20);
 
 --TABLA DE COMENTARIOS PARA PUBLICACIONES
 CREATE TABLE comentarios (

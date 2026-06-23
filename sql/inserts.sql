@@ -118,7 +118,7 @@ INSERT INTO dias_semana (nombre) VALUES
 
 
 ---------------------------------
---Ejemplos--
+--Pruebas--
 ---------------------------------
 
 -- 🔹 Servicios
@@ -180,11 +180,6 @@ INSERT INTO vet_especies (id_vet, id_especie)
 VALUES
 (1, 1),
 (1, 2);
-
--- Cambios tabla  VETERINARIAS 
-ALTER TABLE veterinarias 
-ADD COLUMN correo_negocio VARCHAR(255),
-ADD COLUMN telefono_local VARCHAR(20);
 
 
 UPDATE veterinarias 

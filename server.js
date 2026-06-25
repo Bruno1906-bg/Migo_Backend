@@ -127,6 +127,46 @@ app.get('/api/comentarios/:id_publi', (req, res) => {
     });
 });
 
+// ESPECIES
+app.get('/api/especies', (req, res) => {
+    db.query("SELECT id_especie, nombre FROM especies ORDER BY nombre ASC", (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results);
+    });
+});
+
+// TIPOS DE PUBLICACIÓN
+app.get('/api/tipos_publi', (req, res) => {
+    db.query("SELECT id_tipo, nombre FROM tipos_publi ORDER BY nombre ASC", (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results);
+    });
+});
+
+// ESTADOS DE PUBLICACIÓN
+app.get('/api/estados_publi', (req, res) => {
+    db.query("SELECT id_estado, nombre FROM estados_publi", (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results);
+    });
+});
+
+// SERVICIOS
+app.get('/api/servicios', (req, res) => {
+    db.query("SELECT id_servicio, nombre FROM servicios", (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results);
+    });
+});
+
+// DÍAS DE LA SEMANA
+app.get('/api/dias_semana', (req, res) => {
+    db.query("SELECT id_dia, nombre FROM dias_semana", (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results);
+    });
+});
+
 // 4. Inicio del servidor
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, '0.0.0.0', () => console.log(`Servidor corriendo en puerto ${PORT} 🏃‍♂️`));

@@ -125,11 +125,14 @@ app.get('/api/especies', (req, res) => {
     });
 });
 
-// Publicaciones (Listar con los JOINs correctos)
+
+////////Publicaciones////////
+
+// Publicaciones (Listar con los JOINs para obtener los nombres de usuario, colonia, especie, tipo y estado)
 app.get('/api/publicaciones', (req, res) => {
     const sql = `
         SELECT p.id_publi, p.nombre_pet, p.descripcion, p.fecha_publi,
-               u.nombre AS usuario, 
+               u.id_usuario, u.nombre AS usuario, u.correo, u.telefono,
                c.nombre AS nombre_colonia, 
                e.nombre AS especie,
                t.nombre AS tipo, 
@@ -149,6 +152,7 @@ app.get('/api/publicaciones', (req, res) => {
         res.json(results);
     });
 });
+
 
 // Crear nueva publicación
 app.post('/api/publicaciones', (req, res) => {

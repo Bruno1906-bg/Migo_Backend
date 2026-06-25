@@ -58,6 +58,14 @@ app.post('/api/usuarios', (req, res) => {
     });
 });
 
+// COLONIAS
+app.get('/api/colonias', (req, res) => {
+    db.query("SELECT id_colonia, nombre FROM colonias ORDER BY nombre ASC", (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results);
+    });
+});
+
 app.get('/api/usuarios/:id', (req, res) => {
     const sql = "SELECT u.*, c.nombre AS colonia FROM usuarios u LEFT JOIN colonias c ON u.id_colonia = c.id_colonia WHERE u.id_usuario = ?";
     db.query(sql, [req.params.id], (err, results) => {

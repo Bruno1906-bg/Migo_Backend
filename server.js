@@ -127,6 +127,36 @@ app.get('/api/comentarios/:id_publi', (req, res) => {
     });
 });
 
+// POST: Crear comentario
+app.post('/api/comentarios', (req, res) => {
+    const { id_publi, id_usuario, comentario } = req.body;
+    const sql = "INSERT INTO comentarios (id_publi, id_usuario, comentario) VALUES (?, ?, ?)";
+    db.query(sql, [id_publi, id_usuario, comentario], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: 'Comentario publicado', id_comentario: result.insertId });
+    });
+});
+
+// PUT: Editar comentario
+app.put('/api/comentarios/:id', (req, res) => {
+    const { comentario, id_usuario } = req.body;
+    const sql = "UPDATE comentarios SET comentario = ? WHERE id_comentario = ? AND id_usuario = ?";
+    db.query(sql, [comentario, req.params.id, id_usuario], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (result.affectedRows === 0) return res.status(403).json({ error: "No autorizado o no existe" });
+        res.json({ message: 'Comentario actualizado' });
+    });
+});
+
+// DELETE: Eliminar comentario
+app.delete('/api/comentarios/:id/:id_usuario', (req, res) => {
+    const sql = "DELETE FROM comentarios WHERE id_comentario = ? AND id_usuario = ?";
+    db.query(sql, [req.params.id, req.params.id_usuario], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: 'Comentario eliminado' });
+    });
+});
+
 // ESPECIES
 app.get('/api/especies', (req, res) => {
     db.query("SELECT id_especie, nombre FROM especies ORDER BY nombre ASC", (err, results) => {

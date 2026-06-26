@@ -119,6 +119,32 @@ app.post('/api/login-vet', (req, res) => {
     });
 });
 
+// GET veterinaria por id_vet
+app.get('/api/veterinaria/:id_vet', (req, res) => {
+    const sql = `SELECT v.*, c.nombre AS nombre_colonia 
+                 FROM veterinarias v 
+                 LEFT JOIN colonias c ON v.id_colonia = c.id_colonia 
+                 WHERE v.id_vet = ?`;
+    db.query(sql, [req.params.id_vet], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (results.length === 0) return res.status(404).json({ message: "Veterinaria no encontrada" });
+        res.json(results[0]);
+    });
+});
+
+// PUT actualizar veterinaria
+app.put('/api/veterinarias/:id_vet', (req, res) => {
+    const { nombre_establecimiento, descripcion, id_colonia, correo_negocio, telefono_local, sitio_web } = req.body;
+    const sql = `UPDATE veterinarias 
+                 SET nombre_establecimiento = ?, descripcion = ?, id_colonia = ?, 
+                     correo_negocio = ?, telefono_local = ?, sitio_web = ?
+                 WHERE id_vet = ?`;
+    db.query(sql, [nombre_establecimiento, descripcion, id_colonia, correo_negocio, telefono_local, sitio_web, req.params.id_vet], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: 'Veterinaria actualizada correctamente' });
+    });
+});
+
 // REGISTRO VETERINARIA
 app.post('/api/registro-vet', (req, res) => {
     const { nombre, apellido, correo, contrasena, telefono, direccion, id_colonia, nombre_establecimiento, descripcion, sitio_web, correo_negocio, telefono_local } = req.body;

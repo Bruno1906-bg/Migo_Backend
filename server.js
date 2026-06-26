@@ -18,6 +18,8 @@ const db = mysql.createConnection({
     database: 'migo_db_VUE'
 });
 
+
+
 // ENDPOINTS
 
 
@@ -219,8 +221,14 @@ app.post('/api/login-vet', (req, res) => {
 // Registro de veterinario
 app.post('/api/registro-vet', (req, res) => {
     const {
-        nombre, apellido, correo, contrasena, id_colonia,
-        nombre_establecimiento, correo_negocio, telefono_local
+        nombre,
+        apellido,
+        correo,
+        contrasena,
+        id_colonia,
+        nombre_establecimiento,
+        direccion,
+        telefono
     } = req.body;
 
     const checkSql = "SELECT id_usuario FROM usuarios WHERE correo = ?";
@@ -233,17 +241,20 @@ app.post('/api/registro-vet', (req, res) => {
         db.beginTransaction((err) => {
             if (err) return res.status(500).json({ error: "Error de conexión" });
 
-            const sqlUser = "INSERT INTO usuarios (nombre, apellido, correo, contrasena, id_colonia, rol) VALUES (?, ?, ?, ?, ?, 'veterinario')";
-            db.query(sqlUser, [nombre, apellido, correo, contrasena, id_colonia], (err, result) => {
+            // ✅ Inserta datos del usuario con dirección y teléfono
+            const sqlUser = `
+                INSERT INTO usuarios (nombre, apellido, direccion, telefono, correo, contrasena, id_colonia, rol)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'veterinario')
+            `;
+            db.query(sqlUser, [nombre, apellido, direccion, telefono, correo, contrasena, id_colonia], (err, result) => {
                 if (err) return db.rollback(() => res.status(500).json({ error: err.message }));
 
                 const id_usuario = result.insertId;
-
-                const sqlVet = `INSERT INTO veterinarias 
-                    (id_usuario, nombre_establecimiento, correo_negocio, telefono_local, id_colonia) 
-                    VALUES (?, ?, ?, ?, ?)`;
-
-                db.query(sqlVet, [id_usuario, nombre_establecimiento, correo_negocio, telefono_local, id_colonia], (err) => {
+                const sqlVet = `
+                    INSERT INTO veterinarias (id_usuario, nombre_establecimiento, id_colonia)
+                    VALUES (?, ?, ?)
+                `;
+                db.query(sqlVet, [id_usuario, nombre_establecimiento, id_colonia], (err) => {
                     if (err) return db.rollback(() => res.status(500).json({ error: err.message }));
 
                     db.commit((err) => {
@@ -255,6 +266,7 @@ app.post('/api/registro-vet', (req, res) => {
         });
     });
 });
+
 
 // Veterinarias
 app.get('/api/veterinarias', (req, res) => {
@@ -271,14 +283,14 @@ app.get('/api/veterinarias', (req, res) => {
 
 // Actualizar datos de una veterinaria
 app.put('/api/veterinarias/:id', (req, res) => {
-    const { 
-        nombre_establecimiento, 
-        descripcion, 
-        correo_negocio, 
-        telefono_local, 
-        id_colonia, 
-        imagen_logo, 
-        sitio_web 
+    const {
+        nombre_establecimiento,
+        descripcion,
+        correo_negocio,
+        telefono_local,
+        id_colonia,
+        imagen_logo,
+        sitio_web
     } = req.body;
 
     const sql = `
@@ -294,13 +306,13 @@ app.put('/api/veterinarias/:id', (req, res) => {
     `;
 
     db.query(sql, [
-        nombre_establecimiento, 
-        descripcion, 
-        correo_negocio, 
-        telefono_local, 
-        id_colonia, 
-        imagen_logo, 
-        sitio_web, 
+        nombre_establecimiento,
+        descripcion,
+        correo_negocio,
+        telefono_local,
+        id_colonia,
+        imagen_logo,
+        sitio_web,
         req.params.id
     ], (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -403,7 +415,6 @@ app.get('/api/comentarios/:id_publi', (req, res) => {
         res.json(results);
     });
 });
-console.log("ID del veterinario:", idVet);
 
 //  Publicar comentario
 app.post('/api/comentarios', (req, res) => {

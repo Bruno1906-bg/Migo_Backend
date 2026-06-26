@@ -125,6 +125,27 @@ app.post('/api/fotos', upload.single('imagen'), async (req, res) => {
     }
 });
 
+app.post('/api/publicaciones-con-foto', upload.single('imagen'), async (req, res) => {
+    const { id_usuario, id_colonia, id_especie, id_tipo, id_estado, nombre_pet, descripcion } = req.body;
+    
+    try {
+        // 1. Insertar publicación
+        const sql = "INSERT INTO publicaciones (id_usuario, id_colonia, id_especie, id_tipo, id_estado, nombre_pet, descripcion) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        const [result] = await db.promise().query(sql, [id_usuario, id_colonia, id_especie, id_tipo, id_estado, nombre_pet, descripcion]);
+        const id_publi = result.insertId;
+
+        // 2. Si hay foto, subir a Cloudinary e insertar en BD
+        if (req.file) {
+            const resultCloud = await cloudinary.uploader.upload(req.file.path, { folder: 'migo/publicaciones' });
+            await db.promise().query("INSERT INTO fotos_publi (id_publi, ruta_imagen) VALUES (?, ?)", [id_publi, resultCloud.secure_url]);
+        }
+
+        res.json({ message: 'Publicación exitosa', id_publi });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // VETERINARIAS
 app.get('/api/veterinarias', (req, res) => {
     db.query(`SELECT v.*, c.nombre AS nombre_colonia FROM veterinarias v LEFT JOIN colonias c ON v.id_colonia = c.id_colonia ORDER BY v.nombre_establecimiento ASC`,

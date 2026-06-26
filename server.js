@@ -240,8 +240,14 @@ app.post('/api/login-vet', (req, res) => {
 // Registro de veterinario
 app.post('/api/registro-vet', (req, res) => {
     const {
-        nombre, apellido, correo, contrasena, id_colonia,
-        nombre_establecimiento, correo_negocio, telefono_local
+        nombre,
+        apellido,
+        correo,
+        contrasena,
+        id_colonia,
+        nombre_establecimiento,
+        direccion,
+        telefono
     } = req.body;
 
     const checkSql = "SELECT id_usuario FROM usuarios WHERE correo = ?";
@@ -254,17 +260,22 @@ app.post('/api/registro-vet', (req, res) => {
         db.beginTransaction((err) => {
             if (err) return res.status(500).json({ error: "Error de conexión" });
 
-            const sqlUser = "INSERT INTO usuarios (nombre, apellido, correo, contrasena, id_colonia, rol) VALUES (?, ?, ?, ?, ?, 'veterinario')";
-            db.query(sqlUser, [nombre, apellido, correo, contrasena, id_colonia], (err, result) => {
+            // ✅ Inserta datos del usuario con dirección y teléfono
+            const sqlUser = `
+                INSERT INTO usuarios (nombre, apellido, direccion, telefono, correo, contrasena, id_colonia, rol)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'veterinario')
+            `;
+            db.query(sqlUser, [nombre, apellido, direccion, telefono, correo, contrasena, id_colonia], (err, result) => {
                 if (err) return db.rollback(() => res.status(500).json({ error: err.message }));
 
                 const id_usuario = result.insertId;
 
-                const sqlVet = `INSERT INTO veterinarias 
-                    (id_usuario, nombre_establecimiento, correo_negocio, telefono_local, id_colonia) 
-                    VALUES (?, ?, ?, ?, ?)`;
-
-                db.query(sqlVet, [id_usuario, nombre_establecimiento, correo_negocio, telefono_local, id_colonia], (err) => {
+                // ✅ Inserta datos de la veterinaria (solo lo que tu frontend manda)
+                const sqlVet = `
+                    INSERT INTO veterinarias (id_usuario, nombre_establecimiento, id_colonia)
+                    VALUES (?, ?, ?)
+                `;
+                db.query(sqlVet, [id_usuario, nombre_establecimiento, id_colonia], (err) => {
                     if (err) return db.rollback(() => res.status(500).json({ error: err.message }));
 
                     db.commit((err) => {

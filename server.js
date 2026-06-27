@@ -18,6 +18,19 @@ const db = mysql.createConnection({
     database: 'migo_db_VUE'
 });
 
+///////Función para registrar logs////////
+function registrarLogLoginFallido(correo, detalle) {
+  console.log("Registrando log fallido:", correo, detalle); // Debug
+  const sql = "INSERT INTO logs (correo, accion, detalle) VALUES (?, 'LOGIN_FALLIDO', ?)";
+  db.query(sql, [correo, detalle], (err) => {
+    if (err) {
+      console.error("Error guardando log:", err.message);
+    } else {
+      console.log("Log guardado correctamente");
+    }
+  });
+}
+
 
 
 // ENDPOINTS
@@ -65,27 +78,30 @@ app.get('/api/usuarios/:id', (req, res) => {
 
 // Login de usuario
 app.post('/api/login', (req, res) => {
-    const { correo, contrasena } = req.body;
+  const { correo, contrasena } = req.body;
 
-    const sql = `
-        SELECT id_usuario, nombre, rol 
-        FROM usuarios 
-        WHERE correo = ? AND contrasena = ?
-    `;
-    db.query(sql, [correo, contrasena], (err, results) => {
-        if (err) return res.status(500).json({ message: 'Error de servidor' });
+  const sql = `
+      SELECT id_usuario, nombre, rol 
+      FROM usuarios 
+      WHERE correo = ? AND contrasena = ?
+  `;
+  db.query(sql, [correo, contrasena], (err, results) => {
+    if (err) return res.status(500).json({ message: 'Error de servidor' });
 
-        if (results.length > 0) {
-            const usuario = results[0];
-            if (usuario.rol !== 'usuario') {
-                return res.status(403).json({ message: 'No tienes acceso como usuario' });
-            }
-            res.json(usuario);
-        } else {
-            res.status(401).json({ message: 'Credenciales incorrectas' });
-        }
-    });
+    if (results.length > 0) {
+      const usuario = results[0];
+      if (usuario.rol !== 'usuario') {
+        registrarLogLoginFallido(correo, "Intento de login como usuario sin rol válido");
+        return res.status(403).json({ message: 'No tienes acceso como usuario' });
+      }
+      res.json(usuario);
+    } else {
+      registrarLogLoginFallido(correo, "Credenciales incorrectas en login de usuario");
+      res.status(401).json({ message: 'Credenciales incorrectas' });
+    }
+  });
 });
+
 
 // Actualizar perfil de usuario
 app.put('/api/usuarios/:id_usuario', (req, res) => {
@@ -195,28 +211,31 @@ app.post('/api/fotos/:id_publi', upload.single('foto'), (req, res) => {
 
 // Login de veterinario
 app.post('/api/login-vet', (req, res) => {
-    const { correo, contrasena } = req.body;
+  const { correo, contrasena } = req.body;
 
-    const sql = `
-        SELECT u.id_usuario, u.nombre, u.rol, v.id_vet 
-        FROM usuarios u
-        LEFT JOIN veterinarias v ON u.id_usuario = v.id_usuario
-        WHERE u.correo = ? AND u.contrasena = ?
-    `;
-    db.query(sql, [correo, contrasena], (err, results) => {
-        if (err) return res.status(500).json({ message: 'Error de servidor' });
+  const sql = `
+      SELECT u.id_usuario, u.nombre, u.rol, v.id_vet 
+      FROM usuarios u
+      LEFT JOIN veterinarias v ON u.id_usuario = v.id_usuario
+      WHERE u.correo = ? AND u.contrasena = ?
+  `;
+  db.query(sql, [correo, contrasena], (err, results) => {
+    if (err) return res.status(500).json({ message: 'Error de servidor' });
 
-        if (results.length > 0) {
-            const usuario = results[0];
-            if (usuario.rol !== 'veterinario') {
-                return res.status(403).json({ message: 'No tienes acceso como veterinario' });
-            }
-            res.json({ success: true, usuario });
-        } else {
-            res.status(401).json({ message: 'Credenciales inválidas' });
-        }
-    });
+    if (results.length > 0) {
+      const usuario = results[0];
+      if (usuario.rol !== 'veterinario') {
+        registrarLogLoginFallido(correo, "Intento de login como veterinario sin rol válido");
+        return res.status(403).json({ message: 'No tienes acceso como veterinario' });
+      }
+      res.json({ success: true, usuario });
+    } else {
+      registrarLogLoginFallido(correo, "Credenciales inválidas en login de veterinario");
+      res.status(401).json({ message: 'Credenciales inválidas' });
+    }
+  });
 });
+
 
 // Registro de veterinario
 app.post('/api/registro-vet', (req, res) => {
@@ -250,6 +269,8 @@ app.post('/api/registro-vet', (req, res) => {
                 if (err) return db.rollback(() => res.status(500).json({ error: err.message }));
 
                 const id_usuario = result.insertId;
+
+                // ✅ Inserta datos de la veterinaria (solo lo que tu frontend manda)
                 const sqlVet = `
                     INSERT INTO veterinarias (id_usuario, nombre_establecimiento, id_colonia)
                     VALUES (?, ?, ?)
@@ -267,7 +288,6 @@ app.post('/api/registro-vet', (req, res) => {
     });
 });
 
-
 // Veterinarias
 app.get('/api/veterinarias', (req, res) => {
     const sql = `
@@ -281,16 +301,111 @@ app.get('/api/veterinarias', (req, res) => {
     });
 });
 
+// Obtener todas las veterinarias con horarios y servicios
+app.get('/api/veterinarias/detallado', (req, res) => {
+    const sql = `
+        SELECT v.*, c.nombre AS nombre_colonia
+        FROM veterinarias v
+        LEFT JOIN colonias c ON v.id_colonia = c.id_colonia
+    `;
+    db.query(sql, (err, vets) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (vets.length === 0) return res.json([]);
+
+        // Para cada veterinaria, traer horarios y servicios
+        const promises = vets.map(vet => {
+            return new Promise((resolve, reject) => {
+                // Horarios
+                const sqlHorarios = `
+                    SELECT h.id_dia, d.nombre AS dia, h.hora_apertura, h.hora_cierre, h.cerrado
+                    FROM horarios_vet h
+                    JOIN dias_semana d ON h.id_dia = d.id_dia
+                    WHERE h.id_vet = ?
+                    ORDER BY h.id_dia ASC
+                `;
+                db.query(sqlHorarios, [vet.id_vet], (err, horarios) => {
+                    if (err) return reject(err);
+                    vet.horarios = horarios;
+
+                    // Servicios
+                    const sqlServicios = `
+                        SELECT s.id_servicio, s.nombre
+                        FROM vet_servicios vs
+                        JOIN servicios s ON vs.id_servicio = s.id_servicio
+                        WHERE vs.id_vet = ?
+                    `;
+                    db.query(sqlServicios, [vet.id_vet], (err, servicios) => {
+                        if (err) return reject(err);
+                        vet.servicios = servicios;
+                        resolve(vet);
+                    });
+                });
+            });
+        });
+
+        Promise.all(promises)
+            .then(result => res.json(result))
+            .catch(error => res.status(500).json({ error: error.message }));
+    });
+});
+
+// Obtener veterinaria con todos sus datos (incluye horarios y servicios)
+app.get('/api/veterinaria/:id/detallado', (req, res) => {
+    const { id } = req.params;
+
+    const sqlVet = `
+        SELECT v.*, c.nombre AS nombre_colonia
+        FROM veterinarias v
+        LEFT JOIN colonias c ON v.id_colonia = c.id_colonia
+        WHERE v.id_vet = ?
+    `;
+
+    db.query(sqlVet, [id], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (results.length === 0) return res.status(404).json({ message: "Veterinaria no encontrada" });
+
+        const vet = results[0];
+
+        // Obtener horarios
+        const sqlHorarios = `
+            SELECT h.id_dia, d.nombre AS dia, h.hora_apertura, h.hora_cierre, h.cerrado
+            FROM horarios_vet h
+            JOIN dias_semana d ON h.id_dia = d.id_dia
+            WHERE h.id_vet = ?
+            ORDER BY h.id_dia ASC
+        `;
+        db.query(sqlHorarios, [id], (err, horarios) => {
+            if (err) return res.status(500).json({ error: err.message });
+            vet.horarios = horarios;
+
+            // Obtener servicios
+            const sqlServicios = `
+                SELECT s.id_servicio, s.nombre
+                FROM vet_servicios vs
+                JOIN servicios s ON vs.id_servicio = s.id_servicio
+                WHERE vs.id_vet = ?
+            `;
+            db.query(sqlServicios, [id], (err, servicios) => {
+                if (err) return res.status(500).json({ error: err.message });
+                vet.servicios = servicios;
+
+                res.json(vet);
+            });
+        });
+    });
+});
+
+
 // Actualizar datos de una veterinaria
 app.put('/api/veterinarias/:id', (req, res) => {
-    const {
-        nombre_establecimiento,
-        descripcion,
-        correo_negocio,
-        telefono_local,
-        id_colonia,
-        imagen_logo,
-        sitio_web
+    const { 
+        nombre_establecimiento, 
+        descripcion, 
+        correo_negocio, 
+        telefono_local, 
+        id_colonia, 
+        imagen_logo, 
+        sitio_web 
     } = req.body;
 
     const sql = `
@@ -306,13 +421,13 @@ app.put('/api/veterinarias/:id', (req, res) => {
     `;
 
     db.query(sql, [
-        nombre_establecimiento,
-        descripcion,
-        correo_negocio,
-        telefono_local,
-        id_colonia,
-        imagen_logo,
-        sitio_web,
+        nombre_establecimiento, 
+        descripcion, 
+        correo_negocio, 
+        telefono_local, 
+        id_colonia, 
+        imagen_logo, 
+        sitio_web, 
         req.params.id
     ], (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -335,6 +450,144 @@ app.post('/api/veterinarias/:id/logo', upload.single('logo'), (req, res) => {
         res.json({ message: 'Logo actualizado correctamente', imagen_logo: ruta });
     });
 });
+
+// Obtener horarios de una veterinaria
+app.get('/api/horarios/:idVet', (req, res) => {
+    const { idVet } = req.params;
+    const sql = `
+        SELECT h.id_horario, h.id_vet, h.id_dia, d.nombre AS dia, 
+               h.hora_apertura, h.hora_cierre, h.cerrado
+        FROM horarios_vet h
+        JOIN dias_semana d ON h.id_dia = d.id_dia
+        WHERE h.id_vet = ?
+        ORDER BY h.id_dia ASC
+    `;
+    db.query(sql, [idVet], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
+// Actualizar horarios de una veterinaria
+app.put('/api/horarios/:idVet', (req, res) => {
+    const { idVet } = req.params;
+    const horarios = req.body; // objeto con id_dia como clave
+
+    db.beginTransaction(err => {
+        if (err) return res.status(500).json({ error: "Error de conexión" });
+
+        const dias = Object.keys(horarios);
+
+        // Procesar cada día
+        dias.forEach(id_dia => {
+            const { hora_apertura, hora_cierre, cerrado } = horarios[id_dia];
+
+            const sql = `
+                INSERT INTO horarios_vet (id_vet, id_dia, hora_apertura, hora_cierre, cerrado)
+                VALUES (?, ?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE 
+                    hora_apertura = VALUES(hora_apertura),
+                    hora_cierre = VALUES(hora_cierre),
+                    cerrado = VALUES(cerrado)
+            `;
+
+            db.query(sql, [idVet, id_dia, hora_apertura || null, hora_cierre || null, cerrado ? 1 : 0], (err) => {
+                if (err) return db.rollback(() => res.status(500).json({ error: err.message }));
+            });
+        });
+
+        db.commit(err => {
+            if (err) return db.rollback(() => res.status(500).json({ error: "Error al guardar horarios" }));
+            res.json({ message: "Horarios actualizados correctamente" });
+        });
+    });
+});
+
+// Obtener días de la semana
+app.get('/api/dias-semana', (req, res) => {
+    const sql = "SELECT id_dia, nombre FROM dias_semana ORDER BY id_dia ASC";
+    db.query(sql, (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
+// Crear un nuevo servicio
+app.post('/api/servicios', (req, res) => {
+    const { nombre } = req.body;
+    if (!nombre) return res.status(400).json({ error: "El nombre del servicio es obligatorio" });
+
+    const sql = "INSERT INTO servicios (nombre) VALUES (?)";
+    db.query(sql, [nombre], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: "Servicio creado correctamente", id_servicio: result.insertId });
+    });
+});
+
+// Asociar servicios a una veterinaria
+app.post('/api/vet-servicios/:idVet', (req, res) => {
+    const { idVet } = req.params;
+    const serviciosSeleccionados = req.body; // array de IDs de servicios
+
+    if (!Array.isArray(serviciosSeleccionados)) {
+        return res.status(400).json({ error: "Se requiere un array de servicios" });
+    }
+
+    db.beginTransaction(err => {
+        if (err) return res.status(500).json({ error: "Error de conexión" });
+
+        // Eliminar asociaciones previas
+        const deleteSql = "DELETE FROM vet_servicios WHERE id_vet = ?";
+        db.query(deleteSql, [idVet], (err) => {
+            if (err) return db.rollback(() => res.status(500).json({ error: err.message }));
+
+            // Insertar nuevas asociaciones
+            if (serviciosSeleccionados.length > 0) {
+                const insertSql = "INSERT INTO vet_servicios (id_vet, id_servicio) VALUES ?";
+                const values = serviciosSeleccionados.map(id_servicio => [idVet, id_servicio]);
+
+                db.query(insertSql, [values], (err) => {
+                    if (err) return db.rollback(() => res.status(500).json({ error: err.message }));
+
+                    db.commit(err => {
+                        if (err) return db.rollback(() => res.status(500).json({ error: "Error al guardar servicios" }));
+                        res.json({ message: "Servicios asociados correctamente" });
+                    });
+                });
+            } else {
+                db.commit(err => {
+                    if (err) return db.rollback(() => res.status(500).json({ error: "Error al guardar servicios" }));
+                    res.json({ message: "Servicios eliminados correctamente" });
+                });
+            }
+        });
+    });
+});
+
+// Obtener todos los servicios
+app.get('/api/servicios', (req, res) => {
+    const sql = "SELECT id_servicio, nombre FROM servicios ORDER BY nombre ASC";
+    db.query(sql, (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
+// Obtener servicios de una veterinaria
+app.get('/api/vet-servicios/:idVet', (req, res) => {
+    const { idVet } = req.params;
+    const sql = `
+        SELECT s.id_servicio, s.nombre
+        FROM vet_servicios vs
+        JOIN servicios s ON vs.id_servicio = s.id_servicio
+        WHERE vs.id_vet = ?
+    `;
+    db.query(sql, [idVet], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
 
 //Obtener detalles de una veterinaria específica
 app.get('/api/veterinaria/:id', (req, res) => {

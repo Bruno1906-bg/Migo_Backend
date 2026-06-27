@@ -417,6 +417,83 @@ app.get('/api/dias-semana', (req, res) => {
     });
 });
 
+// Crear un nuevo servicio
+app.post('/api/servicios', (req, res) => {
+    const { nombre } = req.body;
+    if (!nombre) return res.status(400).json({ error: "El nombre del servicio es obligatorio" });
+
+    const sql = "INSERT INTO servicios (nombre) VALUES (?)";
+    db.query(sql, [nombre], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: "Servicio creado correctamente", id_servicio: result.insertId });
+    });
+});
+
+// Asociar servicios a una veterinaria
+app.post('/api/vet-servicios/:idVet', (req, res) => {
+    const { idVet } = req.params;
+    const serviciosSeleccionados = req.body; // array de IDs de servicios
+
+    if (!Array.isArray(serviciosSeleccionados)) {
+        return res.status(400).json({ error: "Se requiere un array de servicios" });
+    }
+
+    db.beginTransaction(err => {
+        if (err) return res.status(500).json({ error: "Error de conexión" });
+
+        // Eliminar asociaciones previas
+        const deleteSql = "DELETE FROM vet_servicios WHERE id_vet = ?";
+        db.query(deleteSql, [idVet], (err) => {
+            if (err) return db.rollback(() => res.status(500).json({ error: err.message }));
+
+            // Insertar nuevas asociaciones
+            if (serviciosSeleccionados.length > 0) {
+                const insertSql = "INSERT INTO vet_servicios (id_vet, id_servicio) VALUES ?";
+                const values = serviciosSeleccionados.map(id_servicio => [idVet, id_servicio]);
+
+                db.query(insertSql, [values], (err) => {
+                    if (err) return db.rollback(() => res.status(500).json({ error: err.message }));
+
+                    db.commit(err => {
+                        if (err) return db.rollback(() => res.status(500).json({ error: "Error al guardar servicios" }));
+                        res.json({ message: "Servicios asociados correctamente" });
+                    });
+                });
+            } else {
+                db.commit(err => {
+                    if (err) return db.rollback(() => res.status(500).json({ error: "Error al guardar servicios" }));
+                    res.json({ message: "Servicios eliminados correctamente" });
+                });
+            }
+        });
+    });
+});
+
+// Obtener todos los servicios
+app.get('/api/servicios', (req, res) => {
+    const sql = "SELECT id_servicio, nombre FROM servicios ORDER BY nombre ASC";
+    db.query(sql, (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
+// Obtener servicios de una veterinaria
+app.get('/api/vet-servicios/:idVet', (req, res) => {
+    const { idVet } = req.params;
+    const sql = `
+        SELECT s.id_servicio, s.nombre
+        FROM vet_servicios vs
+        JOIN servicios s ON vs.id_servicio = s.id_servicio
+        WHERE vs.id_vet = ?
+    `;
+    db.query(sql, [idVet], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
+
 //Obtener detalles de una veterinaria específica
 app.get('/api/veterinaria/:id', (req, res) => {
     const sql = `

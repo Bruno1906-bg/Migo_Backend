@@ -185,7 +185,7 @@ app.post('/api/publicaciones', (req, res) => {
     });
 });
 
-// ✅ Editar publicación — verifica que sea el dueño antes de actualizar
+// Editar publicación — verifica que sea el dueño antes de actualizar
 app.put('/api/publicaciones/:id_publi', (req, res) => {
     const { id_publi } = req.params;
     const { id_usuario, id_colonia, id_especie, id_tipo, nombre_pet, descripcion } = req.body;
@@ -206,6 +206,38 @@ app.put('/api/publicaciones/:id_publi', (req, res) => {
         db.query(sql, [id_colonia, id_especie, id_tipo, nombre_pet, descripcion, id_publi], (err) => {
             if (err) return res.status(500).json({ error: err.message });
             res.json({ message: "Publicación actualizada correctamente" });
+        });
+    });
+});
+
+//Borrar Publicacion
+app.delete('/api/publicaciones/:id_publi', (req, res) => {
+    const { id_publi } = req.params;
+    const { id_usuario } = req.body; 
+
+    const checkSql = "SELECT id_usuario FROM publicaciones WHERE id_publi = ?";
+    db.query(checkSql, [id_publi], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (rows.length === 0) return res.status(404).json({ message: "Publicación no encontrada" });
+        
+        if (rows[0].id_usuario !== parseInt(id_usuario)) {
+            return res.status(403).json({ message: "No tienes permiso para eliminar esta publicación" });
+        }
+
+        // 1. Borrar comentarios asociados
+        db.query("DELETE FROM comentarios WHERE id_publi = ?", [id_publi], (err) => {
+            if (err) return res.status(500).json({ error: "Error al borrar comentarios" });
+
+            // 2. Borrar fotos asociadas
+            db.query("DELETE FROM fotos_publi WHERE id_publi = ?", [id_publi], (err) => {
+                if (err) return res.status(500).json({ error: "Error al borrar fotos" });
+
+                // 3. Borrar la publicación
+                db.query("DELETE FROM publicaciones WHERE id_publi = ?", [id_publi], (err) => {
+                    if (err) return res.status(500).json({ error: err.message });
+                    res.json({ message: "Publicación eliminada correctamente" });
+                });
+            });
         });
     });
 });
